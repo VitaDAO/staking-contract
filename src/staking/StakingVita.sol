@@ -7,7 +7,7 @@ import { IStakingVita } from "./IStakingVita.sol";
 
 /**
  * @title StakingVita
- * @author 0xAtum <0xAtum@protonmail.com>
+ * @author 0xAtum <https://x.com/0xAtum>
  * @notice Stake and lock the `TOKEN_IN` for a defined period of time in exchange of the
  * staked version of the token
  */
@@ -30,7 +30,7 @@ contract StakingVita is IStakingVita, ERC20, Owned {
   constructor(address _owner) ERC20("Staked Vita", "stVITA", 18) Owned(_owner) { }
 
   /// @inheritdoc IStakingVita
-  function stake(ScheduleDuration _duration, uint128 _amount) external {
+  function stake(ScheduleDuration _duration, uint128 _amount) external override {
     uint32 cachedTotalVesting = totalStakeSchedules + 1;
     totalStakeSchedules = cachedTotalVesting;
 
@@ -50,33 +50,35 @@ contract StakingVita is IStakingVita, ERC20, Owned {
   }
 
   /// @inheritdoc IStakingVita
-  function batchUnstake(uint32[] calldata _scheduleIds) external {
+  function batchUnstake(uint32[] calldata _scheduleIds) external override {
     for (uint256 i = 0; i < _scheduleIds.length; ++i) {
-      _unstake(_scheduleIds[i], false, false);
+      _executeUnstake(_scheduleIds[i], false, false);
     }
   }
 
   /// @inheritdoc IStakingVita
-  function unstake(uint32 _scheduleId) external {
-    _unstake(_scheduleId, false, false);
+  function unstake(uint32 _scheduleId) external override {
+    _executeUnstake(_scheduleId, false, false);
   }
 
   /// @inheritdoc IStakingVita
-  function forceUnstake(uint32 _scheduleId) external onlyOwner {
-    _unstake(_scheduleId, true, false);
+  function forceUnstake(uint32 _scheduleId) external override onlyOwner {
+    _executeUnstake(_scheduleId, true, false);
   }
 
   /// @inheritdoc IStakingVita
-  function forceUnstakeIgnoreBurning(uint32 _scheduleId) external onlyOwner {
-    _unstake(_scheduleId, true, true);
+  function forceUnstakeIgnoreBurning(uint32 _scheduleId) external override onlyOwner {
+    _executeUnstake(_scheduleId, true, true);
   }
 
-  function _unstake(uint32 _scheduleId, bool _isForce, bool _ignoreBurning) internal {
+  function _executeUnstake(uint32 _scheduleId, bool _isForce, bool _ignoreBurning)
+    internal
+  {
     StakingSchedule storage staking = allStakings[_scheduleId];
     address receiver = staking.owner;
 
     if (!_isForce) {
-      if (msg.sender != receiver) revert NotVestingOwner();
+      if (msg.sender != receiver) revert NotStakingOwner();
       if (staking.end > block.timestamp) revert ScheduleNotFinished();
     }
 
@@ -89,20 +91,21 @@ contract StakingVita is IStakingVita, ERC20, Owned {
 
     TOKEN_IN.transfer(receiver, returning);
 
-    emit Unstaked(receiver, _scheduleId, _isForce);
+    emit Unstaked(receiver, _scheduleId, _isForce, _ignoreBurning);
   }
 
   /// @inheritdoc IStakingVita
   function getStakingSchedule(uint32 _scheduleId)
     external
     view
+    override
     returns (StakingSchedule memory)
   {
     return allStakings[_scheduleId];
   }
 
   /// @inheritdoc IStakingVita
-  function getTotalStaked(address _wallet) external view returns (uint256) {
+  function getTotalStaked(address _wallet) external view override returns (uint256) {
     return stakedBalances[_wallet];
   }
 }

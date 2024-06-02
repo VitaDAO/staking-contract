@@ -19,7 +19,7 @@ interface IStakingVita {
   }
 
   error NotEnoughTokenOut();
-  error NotVestingOwner();
+  error NotStakingOwner();
   error ScheduleNotFinished();
 
   event Stake(
@@ -28,7 +28,9 @@ interface IStakingVita {
     ScheduleDuration scheduleDuration,
     uint128 stakedAmount
   );
-  event Unstaked(address indexed wallet, uint32 indexed stakeId, bool forced);
+  event Unstaked(
+    address indexed wallet, uint32 indexed stakeId, bool forced, bool ignoreBurning
+  );
 
   /**
    * @notice Stake `TOKEN_IN` and received the Staked Version of the Token.

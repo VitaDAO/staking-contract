@@ -9,7 +9,7 @@ import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
 
 /**
  * @title VestingVita
- * @author 0xAtum <0xAtum@protonmail.com>
+ * @author 0xAtum <https://x.com/0xAtum>
  * @notice Vesting contract
  */
 contract VestingVita is Owned, IVestingVita {
@@ -29,7 +29,7 @@ contract VestingVita is Owned, IVestingVita {
     uint32 _vestingDurationInSeconds,
     uint128 _amount,
     bool _canBeCanceled
-  ) external onlyOwner {
+  ) external override onlyOwner {
     _create(
       _receiver,
       uint32(block.timestamp),
@@ -48,7 +48,7 @@ contract VestingVita is Owned, IVestingVita {
     uint32 _vestingDurationInSeconds,
     uint128 _amount,
     bool _canBeCanceled
-  ) external onlyOwner {
+  ) external override onlyOwner {
     _create(
       _receiver,
       _startTimestamp,
@@ -61,43 +61,50 @@ contract VestingVita is Owned, IVestingVita {
 
   function _create(
     address _receiver,
-    uint32 _start,
-    uint32 _cliff,
-    uint32 _end,
+    uint32 _startTimestamp,
+    uint32 _cliffDuration,
+    uint32 _endDuration,
     uint128 _amount,
     bool _canBeCanceled
   ) internal {
-    if (_start > _end) {
-      revert CreateVestingError("Start Timestamp is higher than the End Timestamp");
+    if (_receiver == address(0)) revert AddressCannotBeZero();
+
+    uint32 cliff = _startTimestamp + _cliffDuration;
+    uint32 end = _startTimestamp + _endDuration;
+    uint32 cachedVestingId = totalVesting + 1;
+    totalVesting = cachedVestingId;
+
+    if (cliff > end) {
+      revert CreateVestingError("Cliff Timestamp > End Timestamp");
     }
-    if (_start > _cliff) {
-      revert CreateVestingError("Start Timestamp is higher than the Cliff Timestamp");
+    if (_endDuration == 0 || end <= block.timestamp) {
+      revert CreateVestingError("End Timestamp is already expired");
     }
-    if (_cliff > _end) {
-      revert CreateVestingError("Cliff Timestamp is higher than the End Timestamp");
+    if (_cliffDuration != 0 && cliff <= block.timestamp) {
+      revert CreateVestingError("Cliff Timestamp is already expired");
     }
 
-    TOKEN_OUT.transfer(msg.sender, _amount);
+    TOKEN_OUT.transferFrom(msg.sender, address(this), _amount);
 
-    uint32 cachedTotalVesting = totalVesting + 1;
-    totalVesting = cachedTotalVesting;
-
-    allVestings[cachedTotalVesting] = Vesting({
-      ratePerSecond: FixedPointMathLib.mulDivDown(_amount, RAY, _end - _start),
+    Vesting memory vesting = Vesting({
+      ratePerSecond: FixedPointMathLib.mulDivDown(_amount, RAY, _endDuration),
       receiver: _receiver,
       totalAmount: _amount,
       claimed: 0,
-      start: _start,
-      cliff: uint32(block.timestamp + _cliff),
-      end: uint32(block.timestamp + _end),
+      start: _startTimestamp,
+      cliff: cliff,
+      end: end,
       canBeCanceled: _canBeCanceled
     });
 
+    allVestings[cachedVestingId] = vesting;
     balances[_receiver] += _amount;
+
+    emit VestingCreated(cachedVestingId, _receiver, vesting);
   }
 
   /// @inheritdoc IVestingVita
-  function claim(uint32 _vestingSchedule) external {
+  function claim(uint32 _vestingSchedule) external override {
     Vesting storage vesting = allVestings[_vestingSchedule];
     if (vesting.receiver != msg.sender) revert NotVestingReceiver();
 
@@ -108,19 +115,25 @@ contract VestingVita is Owned, IVestingVita {
   /// @inheritdoc IVestingVita
   function cancelVesting(uint32 _vestingSchedule, bool _sendVestedReward)
     external
+    override
     onlyOwner
   {
     Vesting storage vesting = allVestings[_vestingSchedule];
+    if (vesting.receiver == address(0)) revert VestingNotFound();
+    if (!vesting.canBeCanceled) revert VestingCannotBeCanceled();
+
     uint128 totalAmount = vesting.totalAmount;
 
     if (_sendVestedReward) {
       _claim(_vestingSchedule, vesting);
     }
 
-    TOKEN_OUT.transfer(msg.sender, totalAmount - vesting.claimed);
+    uint256 leftOver = totalAmount - vesting.claimed;
+
+    TOKEN_OUT.transfer(msg.sender, leftOver);
 
     vesting.claimed = totalAmount;
-    balances[vesting.receiver] = 0;
+    balances[vesting.receiver] -= leftOver;
 
     emit VestingCanceled(_vestingSchedule, _sendVestedReward);
   }
@@ -129,24 +142,30 @@ contract VestingVita is Owned, IVestingVita {
     internal
     returns (uint256 claimed_)
   {
+    address receiver = _vesting.receiver;
+
     uint256 remaining;
     (claimed_, remaining) = _getUnlockedToken(_vesting);
 
     if (claimed_ == 0) return 0;
 
     _vesting.claimed += uint128(claimed_);
-    balances[msg.sender] -= claimed_;
+    balances[receiver] -= claimed_;
 
-    TOKEN_OUT.transfer(_vesting.receiver, claimed_);
+    TOKEN_OUT.transfer(receiver, claimed_);
     emit VestedClaimed(_vestingId, claimed_, remaining);
 
     return claimed_;
   }
 
   /// @inheritdoc IVestingVita
-  function getUnlockedToken(uint32 _scheduleId) external view returns (uint256 unlocked_) {
-    (unlocked_,) = _getUnlockedToken(allVestings[_scheduleId]);
-    return unlocked_;
+  function getUnlockedToken(uint32 _scheduleId)
+    external
+    view
+    override
+    returns (uint256 unlocked_, uint256 remaining_)
+  {
+    return _getUnlockedToken(allVestings[_scheduleId]);
   }
 
   function _getUnlockedToken(Vesting storage _vesting)
@@ -159,16 +178,29 @@ contract VestingVita is Owned, IVestingVita {
     if (_vesting.cliff > block.timestamp || _vesting.claimed >= totalAmount) {
       return (0, totalAmount);
     }
-    if (_vesting.end < block.timestamp) return (totalAmount - _vesting.claimed, 0);
+    if (_vesting.end <= block.timestamp) return (totalAmount - _vesting.claimed, 0);
 
     uint32 timePassed = uint32(block.timestamp - _vesting.start);
     unlocked_ = FixedPointMathLib.mulDivDown(timePassed, _vesting.ratePerSecond, RAY);
 
-    return (unlocked_ - _vesting.claimed, totalAmount - unlocked_);
+    unlocked_ -= _vesting.claimed;
+    remaining_ = totalAmount - unlocked_;
+
+    return (unlocked_, remaining_);
   }
 
   /// @inheritdoc IVestingVita
-  function balanceOf(address _wallet) external view returns (uint256) {
+  function tokenOutBalanceOf(address _wallet) external view override returns (uint256) {
     return balances[_wallet];
+  }
+
+  /// @inheritdoc IVestingVita
+  function getVestingSchedule(uint32 _vestingId)
+    external
+    view
+    override
+    returns (Vesting memory)
+  {
+    return allVestings[_vestingId];
   }
 }

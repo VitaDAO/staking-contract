@@ -4,6 +4,9 @@ pragma solidity >=0.8.0;
 interface IVestingVita {
   error CreateVestingError(string);
   error NothingToClaim();
+  error VestingCannotBeCanceled();
+  error VestingNotFound();
+  error AddressCannotBeZero();
 
   struct Vesting {
     uint256 ratePerSecond;
@@ -16,6 +19,9 @@ interface IVestingVita {
     bool canBeCanceled;
   }
 
+  event VestingCreated(
+    uint32 indexed scheduleId, address indexed receiver, Vesting vesting
+  );
   event VestingCanceled(uint32 indexed scheduleId, bool vestedRewardSent);
   event VestedClaimed(uint32 indexed scheduleId, uint256 claimed, uint256 remaining);
 
@@ -74,13 +80,27 @@ interface IVestingVita {
   /**
    * @notice get how many vested tokens ready to be claimed
    * @param _scheduleId Id of the vesting schedule
+   * @return unlocked_ how many unlocked token ready to be claimed
+   * @return remaining_ how many is left from this vesting
    */
-  function getUnlockedToken(uint32 _scheduleId) external view returns (uint256 unlocked_);
+  function getUnlockedToken(uint32 _scheduleId)
+    external
+    view
+    returns (uint256 unlocked_, uint256 remaining_);
 
   /**
    * @notice get the `TOKEN_OUT`'s balance of a `_wallet`
    * @param _wallet address of the `_wallet`
    * @return balance Total `TOKEN_OUT` of the `_wallet`, vested and vesting
    */
-  function balanceOf(address _wallet) external view returns (uint256);
+  function tokenOutBalanceOf(address _wallet) external view returns (uint256);
+
+  /**
+   * @notice Get Vesting Schedule with its ID
+   * @param _vestingId Vesting Schedule Id
+   * @return VestingSchedule
+   * (uint256 ratePerSecond, uint128 totalAmount, uint128 claimed, address receiver,
+   * uint32 start, uint32 cliff, uint32 end, bool canBeCanceled)
+   */
+  function getVestingSchedule(uint32 _vestingId) external view returns (Vesting memory);
 }
