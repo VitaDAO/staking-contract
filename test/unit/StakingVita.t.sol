@@ -41,7 +41,7 @@ contract StakingVitaTest is BaseTest {
     assertEq(abi.encode(underTest.symbol()), abi.encode("stVITA"));
     assertEq(underTest.decimals(), 18);
 
-    assertEq(address(underTest.tokenIn()), 0x81f8f0bb1cB2A06649E51913A151F0E7Ef6FA321);
+    assertEq(address(underTest.tokenIn()), address(tokenIn));
 
     uint8 totalEnums = uint8(type(IStakingVita.ScheduleDuration).max);
 
