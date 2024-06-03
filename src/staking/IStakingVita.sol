@@ -33,7 +33,7 @@ interface IStakingVita {
   );
 
   /**
-   * @notice Stake `TOKEN_IN` and received the Staked Version of the Token.
+   * @notice Stake `tokenIn` and received the Staked Version of the Token.
    * @param _duration Schedule Lock Duration Mode.
    * @param _amount Amount to lock.
    */
@@ -77,9 +77,9 @@ interface IStakingVita {
     returns (StakingSchedule memory);
 
   /**
-   * @notice Get Total `TOKEN_IN` staked by the `_wallet`
+   * @notice Get Total `tokenIn` staked by the `_wallet`
    * @param _wallet Address to look upon
-   * @return totalStaked Total `TOKEN_IN` staked by the `_wallet`
+   * @return totalStaked Total `tokenIn` staked by the `_wallet`
    */
   function getTotalStaked(address _wallet) external view returns (uint256);
 }

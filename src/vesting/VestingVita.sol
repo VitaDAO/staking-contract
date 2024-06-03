@@ -13,14 +13,16 @@ import { FixedPointMathLib } from "solmate/utils/FixedPointMathLib.sol";
  * @notice Vesting contract
  */
 contract VestingVita is Owned, IVestingVita {
-  ERC20 public constant TOKEN_OUT = ERC20(0x81f8f0bb1cB2A06649E51913A151F0E7Ef6FA321);
+  ERC20 public immutable tokenOut;
   uint256 private constant RAY = 10 ** 27;
 
   uint32 public totalVesting;
   mapping(uint32 => Vesting) private allVestings;
   mapping(address => uint256) private balances;
 
-  constructor(address _owner) Owned(_owner) { }
+  constructor(address _owner, address _tokenOut) Owned(_owner) {
+    tokenOut = ERC20(_tokenOut);
+  }
 
   /// @inheritdoc IVestingVita
   function createVesting(
@@ -84,7 +86,7 @@ contract VestingVita is Owned, IVestingVita {
       revert CreateVestingError("Cliff Timestamp is already expired");
     }
 
-    TOKEN_OUT.transferFrom(msg.sender, address(this), _amount);
+    tokenOut.transferFrom(msg.sender, address(this), _amount);
 
     Vesting memory vesting = Vesting({
       ratePerSecond: FixedPointMathLib.mulDivDown(_amount, RAY, _endDuration),
@@ -130,7 +132,7 @@ contract VestingVita is Owned, IVestingVita {
 
     uint256 leftOver = totalAmount - vesting.claimed;
 
-    TOKEN_OUT.transfer(msg.sender, leftOver);
+    tokenOut.transfer(msg.sender, leftOver);
 
     vesting.claimed = totalAmount;
     balances[vesting.receiver] -= leftOver;
@@ -152,7 +154,7 @@ contract VestingVita is Owned, IVestingVita {
     _vesting.claimed += uint128(claimed_);
     balances[receiver] -= claimed_;
 
-    TOKEN_OUT.transfer(receiver, claimed_);
+    tokenOut.transfer(receiver, claimed_);
     emit VestedClaimed(_vestingId, claimed_, remaining);
 
     return claimed_;

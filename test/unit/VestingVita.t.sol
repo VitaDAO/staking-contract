@@ -20,10 +20,7 @@ contract VestingVitaTest is BaseTest {
   function setUp() external {
     createVariables();
 
-    underTest = new VestingVitaHarness(owner);
-
-    tokenOut = MockERC20(address(underTest.TOKEN_OUT()));
-    vm.etch(address(tokenOut), address(new MockERC20("Mock Token", "MT", 18)).code);
+    underTest = new VestingVitaHarness(owner, address(tokenOut));
 
     tokenOut.mint(owner, 1_000_000e18);
   }
@@ -31,6 +28,12 @@ contract VestingVitaTest is BaseTest {
   function createVariables() internal {
     owner = generateAddress("Owner");
     user = generateAddress("User");
+    tokenOut = new MockERC20("Mock Token", "MT", 18);
+  }
+
+  function test_constructor_thenSetupsCorrectly() external view {
+    assertEq(address(underTest.tokenOut()), address(tokenOut));
+    assertEq(underTest.owner(), owner);
   }
 
   function test_createVesting_asUser_thenReverts() external {
@@ -426,7 +429,7 @@ contract VestingVitaTest is BaseTest {
 }
 
 contract VestingVitaHarness is VestingVita {
-  constructor(address _owner) VestingVita(_owner) { }
+  constructor(address _owner, address _tokenOut) VestingVita(_owner, _tokenOut) { }
 
   function exposed_create(
     address _receiver,

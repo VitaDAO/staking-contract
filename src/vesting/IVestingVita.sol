@@ -89,9 +89,9 @@ interface IVestingVita {
     returns (uint256 unlocked_, uint256 remaining_);
 
   /**
-   * @notice get the `TOKEN_OUT`'s balance of a `_wallet`
+   * @notice get the `tokenOut`'s balance of a `_wallet`
    * @param _wallet address of the `_wallet`
-   * @return balance Total `TOKEN_OUT` of the `_wallet`, vested and vesting
+   * @return balance Total `tokenOut` of the `_wallet`, vested and vesting
    */
   function tokenOutBalanceOf(address _wallet) external view returns (uint256);
 

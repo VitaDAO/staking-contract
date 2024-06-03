@@ -22,28 +22,26 @@ contract StakingVitaTest is BaseTest {
 
     createVariables();
 
-    underTest = new StakingVitaHarness(owner);
-
-    tokenIn = MockERC20(address(underTest.TOKEN_IN()));
-    vm.etch(address(tokenIn), address(new MockERC20("Mock Token", "MT", 18)).code);
-
+    underTest = new StakingVitaHarness(owner, address(tokenIn));
     tokenIn.mint(user, 100e18);
   }
 
   function createVariables() internal {
     owner = generateAddress("Owner");
     user = generateAddress("User");
+    tokenIn = new MockERC20("Mock Token", "MT", 18);
   }
 
   function test_constructor_thenContractConfiguredCorrectly() external {
-    underTest = new StakingVitaHarness(owner);
+    underTest = new StakingVitaHarness(owner, address(tokenIn));
 
     assertEq(underTest.owner(), owner);
+    assertEq(address(underTest.tokenIn()), address(tokenIn));
     assertEq(abi.encode(underTest.name()), abi.encode("Staked Vita"));
     assertEq(abi.encode(underTest.symbol()), abi.encode("stVITA"));
     assertEq(underTest.decimals(), 18);
 
-    assertEq(address(underTest.TOKEN_IN()), 0x81f8f0bb1cB2A06649E51913A151F0E7Ef6FA321);
+    assertEq(address(underTest.tokenIn()), 0x81f8f0bb1cB2A06649E51913A151F0E7Ef6FA321);
 
     uint8 totalEnums = uint8(type(IStakingVita.ScheduleDuration).max);
 
@@ -271,7 +269,7 @@ contract StakingVitaTest is BaseTest {
 }
 
 contract StakingVitaHarness is StakingVita {
-  constructor(address _owner) StakingVita(_owner) { }
+  constructor(address _owner, address _tokenIn) StakingVita(_owner, _tokenIn) { }
 
   function exposed_executeUnstake(uint32 _scheduleId, bool _isForce, bool _ignoreBurning)
     external

@@ -8,11 +8,11 @@ import { IStakingVita } from "./IStakingVita.sol";
 /**
  * @title StakingVita
  * @author 0xAtum <https://x.com/0xAtum>
- * @notice Stake and lock the `TOKEN_IN` for a defined period of time in exchange of the
+ * @notice Stake and lock the `tokenIn` for a defined period of time in exchange of the
  * staked version of the token
  */
 contract StakingVita is IStakingVita, ERC20, Owned {
-  ERC20 public constant TOKEN_IN = ERC20(0x81f8f0bb1cB2A06649E51913A151F0E7Ef6FA321);
+  ERC20 public immutable tokenIn;
   uint32 private constant MONTH_IN_SECONDS = 2_629_800;
 
   uint32[] public DURATIONS = [
@@ -27,7 +27,12 @@ contract StakingVita is IStakingVita, ERC20, Owned {
   mapping(uint32 => StakingSchedule) private allStakings;
   mapping(address => uint256) private stakedBalances;
 
-  constructor(address _owner) ERC20("Staked Vita", "stVITA", 18) Owned(_owner) { }
+  constructor(address _owner, address _tokenIn)
+    ERC20("Staked Vita", "stVITA", 18)
+    Owned(_owner)
+  {
+    tokenIn = ERC20(_tokenIn);
+  }
 
   /// @inheritdoc IStakingVita
   function stake(ScheduleDuration _duration, uint128 _amount) external override {
@@ -43,7 +48,7 @@ contract StakingVita is IStakingVita, ERC20, Owned {
     });
 
     stakedBalances[msg.sender] += _amount;
-    TOKEN_IN.transferFrom(msg.sender, address(this), _amount);
+    tokenIn.transferFrom(msg.sender, address(this), _amount);
     _mint(msg.sender, _amount);
 
     emit Stake(msg.sender, cachedTotalVesting, _duration, _amount);
@@ -89,7 +94,7 @@ contract StakingVita is IStakingVita, ERC20, Owned {
       _burn(receiver, returning);
     }
 
-    TOKEN_IN.transfer(receiver, returning);
+    tokenIn.transfer(receiver, returning);
 
     emit Unstaked(receiver, _scheduleId, _isForce, _ignoreBurning);
   }

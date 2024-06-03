@@ -1,0 +1,14 @@
+[
+  {
+    "contractAddress": "0x90E0896b641fC94AbFe8C7C5d6767C4d6c041547",
+    "contractName": "MockERC20"
+  },
+  {
+    "contractAddress": "0xe0d68280089B79A1eA41D389A74f2D2d964f58DA",
+    "contractName": "VestingVita"
+  },
+  {
+    "contractAddress": "0x3e174bfF47243271818b08417FDb5aCf658d6B13",
+    "contractName": "StakingVita"
+  }
+]
