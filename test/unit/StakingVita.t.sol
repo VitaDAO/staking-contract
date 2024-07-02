@@ -207,6 +207,19 @@ contract StakingVitaTest is BaseTest {
     underTest.exposed_executeUnstake(1, false, false);
   }
 
+  function test_executeUnstake_whenWithdrawn_thenReverts() external prankAs(user) {
+    uint128 staking = 0.9e18;
+    uint8 durationMode = 1;
+
+    underTest.stake(IStakingVita.ScheduleDuration(durationMode), staking);
+
+    skip(underTest.DURATIONS(durationMode));
+
+    underTest.exposed_executeUnstake(1, false, false);
+    vm.expectRevert(IStakingVita.StakingAlreadyWithdrawn.selector);
+    underTest.exposed_executeUnstake(1, false, false);
+  }
+
   function test_executeUnstake_whenForced_thenIgnoreLockAndOwnership()
     external
     prankAs(user)

@@ -82,6 +82,8 @@ contract StakingVita is IStakingVita, ERC20, Owned {
     StakingSchedule storage staking = allStakings[_scheduleId];
     address receiver = staking.owner;
 
+    if (staking.withdrawn) revert StakingAlreadyWithdrawn();
+
     if (!_isForce) {
       if (msg.sender != receiver) revert NotStakingOwner();
       if (staking.end > block.timestamp) revert ScheduleNotFinished();
@@ -89,6 +91,7 @@ contract StakingVita is IStakingVita, ERC20, Owned {
 
     uint256 returning = staking.amount;
     stakedBalances[receiver] -= returning;
+    staking.withdrawn = true;
 
     if (!_ignoreBurning) {
       _burn(receiver, returning);
