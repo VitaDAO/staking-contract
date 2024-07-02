@@ -21,6 +21,7 @@ interface IStakingVita {
   error NotEnoughTokenOut();
   error NotStakingOwner();
   error ScheduleNotFinished();
+  error StakingAlreadyWithdrawn();
 
   event Stake(
     address indexed wallet,
