@@ -2,14 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "../BaseScript.sol";
-
-import { StakingVita } from "src/staking/StakingVita.sol";
+import { LockingVita } from "src/LockingVita.sol";
 
 import { MockERC20 } from "test/mock/contract/MockERC20.t.sol";
 
 contract DeployContractsScript is BaseScript {
   string private constant CONFIG_NAME = "ContractsConfig";
-  string private constant STAKING_VITA_NAME = "StakingVita";
+  string private constant LOCKING_VITA_NAME = "LockingVita";
   string private constant TESTNET_ERC20_NAME = "MockERC20";
 
   uint256 activeDeployer;
@@ -35,7 +34,7 @@ contract DeployContractsScript is BaseScript {
     }
 
     _tryDeployContract(
-      STAKING_VITA_NAME, 0, type(StakingVita).creationCode, abi.encode(owner, vita)
+      LOCKING_VITA_NAME, 0, type(LockingVita).creationCode, abi.encode(owner, vita)
     );
   }
 }
