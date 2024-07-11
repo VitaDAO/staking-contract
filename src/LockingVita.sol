@@ -76,6 +76,24 @@ contract LockingVita is ILockingVita, ERC20, Owned {
     _executeUnlock(_scheduleId, true, true);
   }
 
+  function transfer(address, /*to*/ uint256 /*amount*/ )
+    public
+    pure
+    override
+    returns (bool)
+  {
+    revert TransferNotAllowed();
+  }
+
+  function transferFrom(address, /*from*/ address, /*to*/ uint256 /*amount*/ )
+    public
+    pure
+    override
+    returns (bool)
+  {
+    revert TransferNotAllowed();
+  }
+
   function _executeUnlock(uint32 _scheduleId, bool _isForce, bool _ignoreBurning)
     internal
   {

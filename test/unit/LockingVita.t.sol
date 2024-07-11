@@ -278,6 +278,24 @@ contract LockingVitaTest is BaseTest {
     assertEq(balanceBeforeLockVersion - underTest.balanceOf(user), staking);
     assertEq(tokenIn.balanceOf(user) - balanceBeforeTokenIn, staking);
   }
+
+  function test_transfer_thenReverts() external prankAs(user) {
+    underTest.exposed_mint(user, 1e18);
+
+    vm.expectRevert(ILockingVita.TransferNotAllowed.selector);
+    underTest.transfer(generateAddress(), 1e18);
+  }
+
+  function test_transferFrom_thenReverts() external prankAs(user) {
+    address allowanceAddress = generateAddress();
+
+    underTest.exposed_mint(user, 1e18);
+    underTest.approve(allowanceAddress, 1e18);
+
+    changePrank(allowanceAddress);
+    vm.expectRevert(ILockingVita.TransferNotAllowed.selector);
+    underTest.transferFrom(user, generateAddress(), 1e18);
+  }
 }
 
 contract LockingVitaHarness is LockingVita {
@@ -287,5 +305,9 @@ contract LockingVitaHarness is LockingVita {
     external
   {
     _executeUnlock(_scheduleId, _isForce, _ignoreBurning);
+  }
+
+  function exposed_mint(address _to, uint256 _amount) external {
+    _mint(_to, _amount);
   }
 }

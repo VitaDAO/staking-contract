@@ -22,6 +22,7 @@ interface ILockingVita {
   error NotStakingOwner();
   error ScheduleNotFinished();
   error StakingAlreadyWithdrawn();
+  error TransferNotAllowed();
 
   event Locked(
     address indexed locker,
